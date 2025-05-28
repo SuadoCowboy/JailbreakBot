@@ -134,7 +134,6 @@ async def remove_bind_command(interaction: discord.Interaction, bind_name: str):
 		await interaction.response.send_message('Esse servidor nao tem essa bind')
 
 @tree.command(name='color', guild=discord.Object(GUILD_ID))
-@discord.app_commands.checks.has_permissions(moderate_members=True)
 async def color_command(interaction: discord.Interaction, hex_color: str):
 	await interaction.response.defer(ephemeral=True, thinking=True)
 
