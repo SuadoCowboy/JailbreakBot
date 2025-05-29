@@ -165,7 +165,6 @@ async def color_command(interaction: discord.Interaction, hex_color: str):
 
 async def say_command_text_autocomplete(interaction: discord.Interaction, current: str):
 	return [
-		discord.app_commands.Choice(name='fire', value='fire'),
 		discord.app_commands.Choice(name='STF', value='STF')
 	]
 
