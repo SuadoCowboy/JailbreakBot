@@ -163,7 +163,7 @@ async def color_command(interaction: discord.Interaction, hex_color: str):
 	await interaction.user.add_roles(role)
 	await interaction.delete_original_response()
 
-async def arguments_autocomplete(interaction: discord.Interaction, current: str):
+async def say_command_text_autocomplete(interaction: discord.Interaction, current: str):
 	return [
 		discord.app_commands.Choice(name='fire', value='fire'),
 		discord.app_commands.Choice(name='STF', value='STF')
@@ -173,15 +173,17 @@ def say_command_whitelist(interaction: discord.Interaction):
 	return interaction.user.id in SAY_WHITELIST_IDS + [OWNER_ID]
 
 @tree.command(name='say', guild=discord.Object(GUILD_ID))
-@discord.app_commands.autocomplete(arguments=arguments_autocomplete)
+@discord.app_commands.autocomplete(text=say_command_text_autocomplete)
 @discord.app_commands.check(say_command_whitelist)
-async def say_command(interaction: discord.Interaction, arguments: str):
+async def say_command(interaction: discord.Interaction, text: str):
 	await interaction.response.defer(ephemeral=True, thinking=True)
 
-	if arguments == 'STF':
+	print(f'{interaction.user.display_name}: {text}')
+
+	if text == 'STF':
 		await interaction.channel.send('STF É UMA FACÇÃO CRIMINOSA DA MAÇONARIA SATÂNICA ALERTA DAVINCCI SÓCIO DA CAMARGO CORRÊA JUDEUS SIONISTAS COMANDA A MAIOR ORGANIZAÇÃO CRIMINOSA DO MUNDO A MAÇONARIA . JUDICIÁRIO É UMA FACÇÃO CRIMINOSA DA MAÇONARIA SATÂNICA FORÇAS ARMADAS É UMA FACÇÃO CRIMINOSA DA MAÇONARIA SATÂNICA ALERTA DAVINCCI . FAZ O NARCOTRÁFICO PARA INDÚSTRIA FARMACÊUTICA CHINA COM ISRAEL. O NARCOTRÁFICO DAS INDÚSTRIAS FARMACÊUTICA DA MAÇONARIA PARA 150 PAÍSES')
 	else:
-		await interaction.channel.send(arguments)
+		await interaction.channel.send(text)
 
 	await interaction.delete_original_response()
 
