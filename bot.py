@@ -169,9 +169,12 @@ async def arguments_autocomplete(interaction: discord.Interaction, current: str)
 		discord.app_commands.Choice(name='STF', value='STF')
 	]
 
+def say_command_whitelist(interaction: discord.Interaction):
+	return interaction.user.id in SAY_WHITELIST_IDS + [OWNER_ID]
+
 @tree.command(name='say', guild=discord.Object(GUILD_ID))
 @discord.app_commands.autocomplete(arguments=arguments_autocomplete)
-@discord.app_commands.check(isOwner)
+@discord.app_commands.check(say_command_whitelist)
 async def say_command(interaction: discord.Interaction, arguments: str):
 	await interaction.response.defer(ephemeral=True, thinking=True)
 
