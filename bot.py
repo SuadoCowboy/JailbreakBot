@@ -34,9 +34,6 @@ def create_guild(guildId):
 	guilds[guildId]['binds'] = {}
 	save_guilds_file(guildId, guilds[guildId])
 
-with open('fire_arguments.txt', 'r', encoding='utf-8') as f:
-	fireArgs = f.readlines()
-
 binds = json.load(open('binds.json', 'r', encoding='utf-8'))
 
 class JailbreakBot(discord.Client):
@@ -68,8 +65,8 @@ client = JailbreakBot(intents=intents)
 tree = discord.app_commands.CommandTree(client)
 
 @tree.command(
-	name="sound",
-	description="Plays a sound in the voice channel",
+	name='sound',
+	description='Plays a sound in the voice channel',
 	guild=discord.Object(GUILD_ID)
 )
 @discord.app_commands.choices(sound=[discord.app_commands.Choice(name=sound, value=sound) for sound in sounds])
@@ -84,15 +81,18 @@ async def sound_command(interaction: discord.Interaction, sound: str):
 			await asyncio.sleep(0.1)
 
 		await vc.disconnect()
+		await interaction.delete_original_response()
 	else:
 		await interaction.followup.send("Você não está em um canal de voz", ephemeral=True)
 
 @tree.command(name='binds', guild=discord.Object(GUILD_ID))
-async def binds_command(interaction: discord.Interaction):
-	await interaction.response.defer(ephemeral=True, thinking=True)
+async def binds_command(interaction: discord.Interaction, ephemeral: bool=True):
+	await interaction.response.defer(ephemeral=ephemeral, thinking=True)
 
 	content = ''
 	for i in binds:
+		content += i + ' | '
+	for i in guilds[interaction.guild.id]['binds']:
 		content += i + ' | '
 	content = content[:-3]  # Remove the last ' | '
 
@@ -101,13 +101,14 @@ async def binds_command(interaction: discord.Interaction):
 		content = content[2000:]
 		await interaction.channel.send(out)
 
-	await interaction.channel.send(content)
+	await interaction.followup.send(content, ephemeral=ephemeral)
 
 @tree.command(name='fire', guild=discord.Object(GUILD_ID))
 async def fire_command(interaction: discord.Interaction):
 	await interaction.response.defer(ephemeral=True, thinking=False)
+	await interaction.delete_original_response()
+
 	await interaction.channel.send(f'{interaction.user.display_name} deseja despejar o diretor (-1 restante)')
-	await interaction.channel.send(random.choice(fireArgs))
 
 @tree.command(name='add_bind', guild=discord.Object(GUILD_ID))
 @discord.app_commands.checks.has_permissions(manage_messages=True)
@@ -144,43 +145,42 @@ async def color_command(interaction: discord.Interaction, hex_color: str):
 
 	try:
 		hex_color = int(hex_color, 16)
-	except:
+		if hex_color > 0xffffff:
+			await interaction.followup.send('Cor hexadecimal não pode ser mais do que #ffffff')
+			return
+	except Exception as e:
 		await interaction.followup.send("Cor hexadecimal inválida")
+		return
 
 	for role in interaction.user.roles:
 		if role.name == interaction.user.display_name:
 			role = await role.edit(color=hex_color)
 			await interaction.user.add_roles(role)
+			await interaction.delete_original_response()
 			return
 
 	role = await interaction.guild.create_role(name=interaction.user.display_name, color=hex_color)
 	await interaction.user.add_roles(role)
+	await interaction.delete_original_response()
 
-def isOwnerOrFahel(interaction: discord.Interaction):
-	return interaction.user.id == OWNER_ID or interaction.user.id == FAHEL_ID
+async def arguments_autocomplete(interaction: discord.Interaction, current: str):
+	return [
+		discord.app_commands.Choice(name='fire', value='fire'),
+		discord.app_commands.Choice(name='STF', value='STF')
+	]
 
-@tree.command(name='fahel', guild=discord.Object(GUILD_ID))
-@discord.app_commands.choices(arguments=[
-	discord.app_commands.Choice(name='fire', value='fire'),
-	discord.app_commands.Choice(name='fahel.', value='fahel.'),
-	discord.app_commands.Choice(name='<@453745871755018241>', value='<@453745871755018241>')
-])
-@discord.app_commands.check(isOwnerOrFahel)
-async def fahel_command(interaction: discord.Interaction, arguments: str):
+@tree.command(name='say', guild=discord.Object(GUILD_ID))
+@discord.app_commands.autocomplete(arguments=arguments_autocomplete)
+@discord.app_commands.check(isOwner)
+async def say_command(interaction: discord.Interaction, arguments: str):
 	await interaction.response.defer(ephemeral=True, thinking=True)
 
-	if arguments == 'fire':
-		await interaction.channel.send('Fahel quer despejar o diretor.')
-	elif arguments == 'fahel.':
-		await interaction.channel.send('Fahel.')
-	elif arguments == '<@453745871755018241>':
-		await interaction.channel.send('Fahel gameplays original 2077 100% original.')
-	elif arguments == 'STF É UMA FACÇÃO CRIMINOSA DA MAÇONARIA SATÂNICA ALERTA DAVINCCI SÓCIO DA CAMARGO CORRÊA JUDEUS SIONISTAS COMANDA A MAIOR ORGANIZAÇÃO CRIMINOSA DO MUNDO A MAÇONARIA . JUDICIÁRIO É UMA FACÇÃO CRIMINOSA DA MAÇONARIA SATÂNICA FORÇAS ARMADAS É UMA FACÇÃO CRIMINOSA DA MAÇONARIA SATÂNICA ALERTA DAVINCCI . FAZ O NARCOTRÁFICO PARA INDÚSTRIA FARMACÊUTICA CHINA COM ISRAEL. O NARCOTRÁFICO DAS INDÚSTRIAS FARMACÊUTICA DA MAÇONARIA PARA 150 PAÍSES':
-		await interaction.channel.send('PUTA QUE ME PARIU')
+	if arguments == 'STF':
+		await interaction.channel.send('STF É UMA FACÇÃO CRIMINOSA DA MAÇONARIA SATÂNICA ALERTA DAVINCCI SÓCIO DA CAMARGO CORRÊA JUDEUS SIONISTAS COMANDA A MAIOR ORGANIZAÇÃO CRIMINOSA DO MUNDO A MAÇONARIA . JUDICIÁRIO É UMA FACÇÃO CRIMINOSA DA MAÇONARIA SATÂNICA FORÇAS ARMADAS É UMA FACÇÃO CRIMINOSA DA MAÇONARIA SATÂNICA ALERTA DAVINCCI . FAZ O NARCOTRÁFICO PARA INDÚSTRIA FARMACÊUTICA CHINA COM ISRAEL. O NARCOTRÁFICO DAS INDÚSTRIAS FARMACÊUTICA DA MAÇONARIA PARA 150 PAÍSES')
 	else:
-		await interaction.channel.send('Seu argumento é fraco.')
+		await interaction.channel.send(arguments)
 
-	await interaction.response.defer(ephemeral=True)
+	await interaction.delete_original_response()
 
 #keep_alive()
 client.run(os.getenv('DISCORD_BOT_TOKEN')) # type: ignore
