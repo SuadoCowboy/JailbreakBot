@@ -10,40 +10,43 @@ import asyncio
 
 sounds = os.listdir('sounds')
 
-def save_guilds_file(guildId, content):
-	guilds[guildId] = content
-	with open('guilds.json','w') as f:
-		return json.dump(guilds, f, indent=4)
+#def save_guilds_file(guildId, content):
+#	guilds[guildId] = content
+#	with open('guilds.json', 'w', encoding='utf-8') as f:
+#		return json.dump(guilds, f, indent=4)
 
-def get_guilds():
-	guilds = {}
+def save_binds_file():
+	with open('binds.json', 'w', encoding='utf-8') as f:
+		return json.dump(binds, f, indent=4)
 
-	with open('guilds.json','r') as f:
-		guilds = json.load(f)
+#def get_guilds():
+#	guilds = {}
+#
+#	with open('guilds.json','r') as f:
+#		guilds = json.load(f)
+#
+#		for guild in guilds.copy():
+#			guilds[int(guild)] = guilds[guild]
+#			guilds.pop(guild)
+#
+#	return guilds
 
-		for guild in guilds.copy():
-			guilds[int(guild)] = guilds[guild]
-			guilds.pop(guild)
+#guilds = get_guilds()
 
-	return guilds
-
-guilds = get_guilds()
-
-def create_guild(guildId):
-	guilds[guildId] = {}
-	guilds[guildId]['binds'] = {}
-	save_guilds_file(guildId, guilds[guildId])
+#def create_guild(guildId):
+#	guilds[guildId] = {}
+#	guilds[guildId]['binds'] = {}
+#	save_guilds_file(guildId, guilds[guildId])
 
 binds = json.load(open('binds.json', 'r', encoding='utf-8'))
 
 class JailbreakBot(discord.Client):
 	async def on_ready(self):
-		await tree.sync(guild=discord.Object(GUILD_ID))
 		await tree.sync()
 		print(f'Logged in as {self.user}!')
 
-	async def on_join(self, guild: discord.Guild):
-		create_guild(guild.id)
+#	async def on_join(self, guild: discord.Guild):
+#		create_guild(guild.id)
 
 	async def on_message(self, message: discord.Message):
 		if message.author.id == CLIENT_ID:
@@ -55,8 +58,8 @@ class JailbreakBot(discord.Client):
 			await message.channel.send(binds[content])
 			return
 
-		if message.guild != None and content in guilds[message.guild.id]['binds']:
-			await message.channel.send(guilds[message.guild.id]['binds'][content])
+#		if message.guild != None and content in guilds[message.guild.id]['binds']:
+#			await message.channel.send(guilds[message.guild.id]['binds'][content])
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -68,7 +71,7 @@ tree = discord.app_commands.CommandTree(client)
 @tree.command(
 	name='sound',
 	description='Plays a sound in the voice channel',
-	guild=discord.Object(GUILD_ID)
+#	guild=discord.Object(GUILD_ID)
 )
 @discord.app_commands.choices(sound=[discord.app_commands.Choice(name=sound, value=sound) for sound in sounds])
 async def sound_command(interaction: discord.Interaction, sound: str):
@@ -86,15 +89,18 @@ async def sound_command(interaction: discord.Interaction, sound: str):
 	else:
 		await interaction.followup.send("Você não está em um canal de voz", ephemeral=True)
 
-@tree.command(name='binds', guild=discord.Object(GUILD_ID))
+@tree.command(
+	name='binds',
+#	guild=discord.Object(GUILD_ID)
+)
 async def binds_command(interaction: discord.Interaction, ephemeral: bool=True):
 	await interaction.response.defer(ephemeral=ephemeral, thinking=True)
 
 	content = ''
 	for i in binds:
 		content += i + ' | '
-	for i in guilds[interaction.guild.id]['binds']:
-		content += i + ' | '
+#	for i in guilds[interaction.guild.id]['binds']:
+#		content += i + ' | '
 	content = content[:-3]  # Remove the last ' | '
 
 	while len(content) > 2000:
@@ -104,36 +110,49 @@ async def binds_command(interaction: discord.Interaction, ephemeral: bool=True):
 
 	await interaction.followup.send(content, ephemeral=ephemeral)
 
-@tree.command(name='fire', guild=discord.Object(GUILD_ID))
+@tree.command(
+	name='fire',
+	#guild=discord.Object(GUILD_ID)
+)
 async def fire_command(interaction: discord.Interaction):
 	await interaction.response.defer(ephemeral=True, thinking=False)
 	await interaction.delete_original_response()
 
 	await interaction.channel.send(f'{interaction.user.display_name} deseja despejar o diretor (-1 restante)')
 
-@tree.command(name='addbind', guild=discord.Object(GUILD_ID))
-@discord.app_commands.checks.has_permissions(manage_messages=True)
+@tree.command(
+	name='addbind',
+#	guild=discord.Object(GUILD_ID)
+)
+@discord.app_commands.check(isOwner)
 async def addbind_command(interaction: discord.Interaction, bind_name: str, bind_output: str):
 	bind_name = bind_name.replace('_',' ')
 
-	if bind_name not in binds or bind_name in guilds[interaction.guild.id]['binds']:
-		guilds[interaction.guild.id]['binds'][bind_name] = bind_output
-		save_guilds_file(interaction.guild.id, guilds[interaction.guild.id])
+	if bind_name not in binds: #and bind_name not in guilds[interaction.guild.id]['binds']:
+		#guilds[interaction.guild.id]['binds'][bind_name] = bind_output
+		#save_guilds_file(interaction.guild.id, guilds[interaction.guild.id])
+		binds[bind_name] = bind_output
+		save_binds_file()
 		await interaction.response.send_message(f'bind \"{bind_name}\" criada')
 
 	else:
 		await interaction.response.send_message(f'bind \"{bind_name}\" já existe.')
 
 @tree.command(name='removebind', guild=discord.Object(GUILD_ID))
-@discord.app_commands.checks.has_permissions(manage_messages=True)
+@discord.app_commands.check(isOwner)
 async def removebind_command(interaction: discord.Interaction, bind_name: str):
+	await interaction.response.defer(ephemeral=True, thinking=True)
+
 	bind_name = bind_name.replace('_',' ')
-	if bind_name in guilds[interaction.guild.id]['binds']:
-		guilds[interaction.guild.id]['binds'].pop(bind_name)
-		save_guilds_file(interaction.guild.id, guilds[interaction.guild.id])
-		await interaction.response.send_message(f'A bind \"{bind_name}\" foi removida.')
+
+	if bind_name in binds: #guilds[interaction.guild.id]['binds']:
+	#	guilds[interaction.guild.id]['binds'].pop(bind_name)
+		binds.pop(bind_name)
+		#	save_guilds_file(interaction.guild.id, guilds[interaction.guild.id])
+		save_binds_file()
+		await interaction.edit_original_response(content=f'A bind \"{bind_name}\" foi removida.')
 	else:
-		await interaction.response.send_message('Esse servidor nao tem essa bind')
+		await interaction.edit_original_response(content='Bind inexistente') #'Esse servidor nao tem essa bind')
 
 @tree.command(name='color', guild=discord.Object(GUILD_ID))
 async def color_command(interaction: discord.Interaction, hex_color: str):
@@ -211,8 +230,8 @@ async def bindsay_command(interaction: discord.Interaction, bind: str, ephemeral
 	bind = bind.lower()
 	if bind in binds:
 		await interaction.edit_original_response(content=binds[bind])
-	elif interaction.guild and interaction.guild.id in guilds and bind in guilds[interaction.guild.id]['binds']:
-		await interaction.edit_original_response(content=guilds[interaction.guild.id]['binds'])
+	#elif interaction.guild and interaction.guild.id in guilds and bind in guilds[interaction.guild.id]['binds']:
+	#	await interaction.edit_original_response(content=guilds[interaction.guild.id]['binds'])
 	else:
 		await interaction.edit_original_response(content='Bind inexistente')
 
