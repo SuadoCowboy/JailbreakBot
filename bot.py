@@ -39,6 +39,7 @@ binds = json.load(open('binds.json', 'r', encoding='utf-8'))
 class JailbreakBot(discord.Client):
 	async def on_ready(self):
 		await tree.sync(guild=discord.Object(GUILD_ID))
+		await tree.sync()
 		print(f'Logged in as {self.user}!')
 
 	async def on_join(self, guild: discord.Guild):
@@ -59,7 +60,7 @@ class JailbreakBot(discord.Client):
 
 intents = discord.Intents.default()
 intents.message_content = True
-#intents.dm_messages = True
+intents.dm_messages = True
 
 client = JailbreakBot(intents=intents)
 tree = discord.app_commands.CommandTree(client)
@@ -110,9 +111,9 @@ async def fire_command(interaction: discord.Interaction):
 
 	await interaction.channel.send(f'{interaction.user.display_name} deseja despejar o diretor (-1 restante)')
 
-@tree.command(name='add_bind', guild=discord.Object(GUILD_ID))
+@tree.command(name='addbind', guild=discord.Object(GUILD_ID))
 @discord.app_commands.checks.has_permissions(manage_messages=True)
-async def add_bind_command(interaction: discord.Interaction, bind_name: str, bind_output: str):
+async def addbind_command(interaction: discord.Interaction, bind_name: str, bind_output: str):
 	bind_name = bind_name.replace('_',' ')
 
 	if bind_name not in binds or bind_name in guilds[interaction.guild.id]['binds']:
@@ -123,9 +124,9 @@ async def add_bind_command(interaction: discord.Interaction, bind_name: str, bin
 	else:
 		await interaction.response.send_message(f'bind \"{bind_name}\" já existe.')
 
-@tree.command(name='remove_bind', guild=discord.Object(GUILD_ID))
+@tree.command(name='removebind', guild=discord.Object(GUILD_ID))
 @discord.app_commands.checks.has_permissions(manage_messages=True)
-async def remove_bind_command(interaction: discord.Interaction, bind_name: str):
+async def removebind_command(interaction: discord.Interaction, bind_name: str):
 	bind_name = bind_name.replace('_',' ')
 	if bind_name in guilds[interaction.guild.id]['binds']:
 		guilds[interaction.guild.id]['binds'].pop(bind_name)
@@ -163,7 +164,7 @@ async def color_command(interaction: discord.Interaction, hex_color: str):
 	await interaction.user.add_roles(role)
 	await interaction.delete_original_response()
 
-async def say_command_text_autocomplete(interaction: discord.Interaction, current: str):
+async def say_command_text_autocomplete(interaction: discord.Interaction, _current: str):
 	return [
 		discord.app_commands.Choice(name='STF', value='STF')
 	]
@@ -185,6 +186,35 @@ async def say_command(interaction: discord.Interaction, text: str):
 		await interaction.channel.send(text)
 
 	await interaction.delete_original_response()
+
+async def bindsay_command_bind_autocomplete(interaction: discord.Interaction, current: str):
+	current = current.lower().strip()
+
+	bindOptions = []
+	for bind in binds:
+		if not current or bind.startswith(current):
+			bindOptions.append(discord.app_commands.Choice(name=bind, value=bind))
+
+	if interaction.guild and interaction.guild.id in guilds:
+		for bind in guilds[interaction.guild.id]['binds']:
+			if not current or bind.startswith(current):
+				bindOptions.append(discord.app_commands.Choice(name=bind, value=bind))
+
+	return bindOptions
+
+@tree.command(name='bindsay')
+@discord.app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+@discord.app_commands.autocomplete(bind=bindsay_command_bind_autocomplete)
+async def bindsay_command(interaction: discord.Interaction, bind: str, ephemeral: bool=False):
+	await interaction.response.defer(ephemeral=ephemeral, thinking=True)
+
+	bind = bind.lower()
+	if bind in binds:
+		await interaction.edit_original_response(content=binds[bind])
+	elif interaction.guild and interaction.guild.id in guilds and bind in guilds[interaction.guild.id]['binds']:
+		await interaction.edit_original_response(content=guilds[interaction.guild.id]['binds'])
+	else:
+		await interaction.edit_original_response(content='Bind inexistente')
 
 #keep_alive()
 client.run(os.getenv('DISCORD_BOT_TOKEN')) # type: ignore
