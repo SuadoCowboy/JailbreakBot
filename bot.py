@@ -93,6 +93,7 @@ async def sound_command(interaction: discord.Interaction, sound: str):
 	name='binds',
 #	guild=discord.Object(GUILD_ID)
 )
+@discord.app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 async def binds_command(interaction: discord.Interaction, ephemeral: bool=True):
 	await interaction.response.defer(ephemeral=ephemeral, thinking=True)
 
@@ -114,6 +115,7 @@ async def binds_command(interaction: discord.Interaction, ephemeral: bool=True):
 	name='fire',
 	#guild=discord.Object(GUILD_ID)
 )
+@discord.app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 async def fire_command(interaction: discord.Interaction):
 	await interaction.response.defer(ephemeral=True, thinking=False)
 	await interaction.delete_original_response()
@@ -125,7 +127,9 @@ async def fire_command(interaction: discord.Interaction):
 #	guild=discord.Object(GUILD_ID)
 )
 @discord.app_commands.check(isOwner)
+@discord.app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 async def addbind_command(interaction: discord.Interaction, bind_name: str, bind_output: str):
+	await interaction.response.defer(ephemeral=True, thinking=True)
 	bind_name = bind_name.replace('_',' ')
 
 	if bind_name not in binds: #and bind_name not in guilds[interaction.guild.id]['binds']:
@@ -133,13 +137,14 @@ async def addbind_command(interaction: discord.Interaction, bind_name: str, bind
 		#save_guilds_file(interaction.guild.id, guilds[interaction.guild.id])
 		binds[bind_name] = bind_output
 		save_binds_file()
-		await interaction.response.send_message(f'bind \"{bind_name}\" criada')
+		await interaction.edit_original_response(content=f'bind \"{bind_name}\" criada')
 
 	else:
-		await interaction.response.send_message(f'bind \"{bind_name}\" já existe.')
+		await interaction.edit_original_response(content=f'bind \"{bind_name}\" já existe.')
 
 @tree.command(name='removebind', guild=discord.Object(GUILD_ID))
 @discord.app_commands.check(isOwner)
+@discord.app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 async def removebind_command(interaction: discord.Interaction, bind_name: str):
 	await interaction.response.defer(ephemeral=True, thinking=True)
 
@@ -214,10 +219,10 @@ async def bindsay_command_bind_autocomplete(interaction: discord.Interaction, cu
 		if not current or bind.startswith(current):
 			bindOptions.append(discord.app_commands.Choice(name=bind, value=bind))
 
-	if interaction.guild and interaction.guild.id in guilds:
-		for bind in guilds[interaction.guild.id]['binds']:
-			if not current or bind.startswith(current):
-				bindOptions.append(discord.app_commands.Choice(name=bind, value=bind))
+	#if interaction.guild and interaction.guild.id in guilds:
+	#	for bind in guilds[interaction.guild.id]['binds']:
+	#		if not current or bind.startswith(current):
+	#			bindOptions.append(discord.app_commands.Choice(name=bind, value=bind))
 
 	return bindOptions
 
